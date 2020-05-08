@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv='X-UA-Compatible' content='ie=edge' />
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
+    <title>Alexandru C. Popescu - What is Rack and where does it fit in the stack?</title>
+    <link rel="alternate" type="application/atom+xml" title="Atom Feed" href="/feed.xml" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <link href="/stylesheets/site.css" rel="stylesheet" />
+    <link href="/stylesheets/fa-icons.css" rel="stylesheet" />
+    <link href="/stylesheets/highlighting.css" rel="stylesheet" />
+    <script src="/javascripts/site.js"></script>
+  </head>
+  
+  <body class="container">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <a class="navbar-brand" href="/">Alexandru C. Popescu</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon">
+          <i class="fas fa-bars" style="color:#fff; font-size:28px;"></i>
+        </span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarText">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item active">
+            <a class="nav-link" href="/">Posts</a>
+          </li>
+        </ul>
+        <span class="navbar-text">
+          <a href="/about.html">About me</a>
+        </span>
+      </div>
+    </nav>
+
+    <div class="container-fluid">
+      <h3 class="article-title">What is Rack and where does it fit in the web stack?</h3>
+
+<h5><strong>Definition</strong></h5>
+
+<p>Let&rsquo;s start with defining what <b>Rack</b> actually is. This component is nothing else than a glue between a web server and a <b>Ruby</b> application. It allows to pass a web request from the webserver to the Ruby application in a manner that the server does not need to know what kind of application is on the other side (a simple Ruby app, a Rails app, a Sinatra app, etc.)</p>
+<div class="highlight"><pre class="highlight plaintext"><code> Webserver &lt;--------(Rack language)--------&gt; Ruby application
+</code></pre></div>
+<p>But why do we need it? Can&rsquo;t we just use some CGI and get our app running? Not really, or at least not always. CGI scripts are suitable for very simple backends. However, today, many different frameworks arised and we need a way to make a different number of webservers talk to a different number of Ruby applications.</p>
+
+<p>The solution to this is Rack. Without it, webservers should have many implementations of some kind of protocol that forwards requests to multiple applications.</p>
+
+<h5><strong>Where does is fit?</strong></h5>
+
+<p>It stays between a web server and a Ruby application. Both of them must implement an interface in order to comply to the Rack requirements. </p>
+
+<p>In other words they have to speak the Rack language. In Ruby there is no such thing as a <strong>interface</strong> contruct like in Java or other OOP languages. This means they will have to basically implement some functionality based on the documentation Rack provides.</p>
+
+<h5><strong>The Ruby application interface</strong></h5>
+
+<p><b>Rack</b> starts by reading a file, called <b>config.ru</b> (launched as <code>rackup config.ru</code>). This file instructs it on how it should start and which application to start.
+As a very simplified example this file looks like:</p>
+<div class="highlight"><pre class="highlight ruby"><code><span class="nb">require</span> <span class="s1">'rack'</span>
+<span class="k">class</span> <span class="nc">MyApplication</span>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+        <span class="c1"># env: the current request data like parameters and HTTP headers</span>
+        <span class="k">return</span> <span class="p">[</span><span class="mi">200</span><span class="p">,</span> <span class="p">{</span><span class="s1">'Content-type'</span><span class="p">:</span> <span class="s1">'text/plain'</span><span class="p">},</span> <span class="p">[</span><span class="s1">'The html response'</span><span class="p">]]</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+<span class="n">run</span> <span class="no">MyApplication</span><span class="p">.</span><span class="nf">new</span>
+</code></pre></div>
+<p>I&rsquo;ll start to explain the last line of code. Here Rack is calling an his own method called <code>run</code> which takes as an argument a Ruby object which is actually our web application (<code>MyApplication.new</code>). The important thing here is that this object must respond to the <code>call</code> method. This is a requirement that a Ruby application must satisfy, it is the interface i was talking about before. </p>
+
+<p><strong><code>call</code></strong> method must return a response in a predefined format. It must be an array with 3 elements:</p>
+
+<ol>
+<li>HTTP response status code</li>
+<li>A list of the HTTP response headers in a Ruby hash format</li>
+<li>The HTML output which will be rendered on client&rsquo;s browser</li>
+</ol>
+
+<p>For example, in a <strong>Rails</strong> application, the object passed to <code>run</code> is <code>Rails.application</code> which actually responds to the <code>call</code> method.</p>
+
+<h5><strong>The webserver interface</strong></h5>
+
+<p>So far, we&rsquo;ve seen how a Rack compliant application must behave, now let&rsquo;s go on the webserver side and see what it must accomplish in order to talk via Rack.</p>
+
+<p>Every webserver must define a <strong>rack handler</strong> as a Ruby class that implements another method called <code>self.run</code>. This method takes as parameters the application object and other options (see code bellow). Then the class must be <strong>registered</strong> so Rack knows about it (there could be registered many different webserver classes within Rack).</p>
+
+<p>The pseudo-code bellow should give you the idea of what actually is happening:</p>
+<div class="highlight"><pre class="highlight ruby"><code><span class="nb">require</span> <span class="s1">'rack/handler'</span>
+<span class="k">class</span> <span class="nc">MyWebServer</span>
+    <span class="k">def</span> <span class="nc">self</span><span class="o">.</span><span class="nf">run</span><span class="p">(</span><span class="n">appObject</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span>
+        <span class="n">server</span> <span class="o">=</span> <span class="no">TCPServer</span><span class="p">.</span><span class="nf">new</span>
+        <span class="k">while</span> <span class="n">req</span> <span class="o">=</span> <span class="n">server</span><span class="p">.</span><span class="nf">run</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">appObject</span><span class="p">.</span><span class="nf">call</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+            <span class="n">send_response_to_client</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="nf">last</span><span class="p">)</span>
+        <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+<span class="n">register</span> <span class="ss">:mywebserver</span><span class="p">,</span> <span class="no">MyWebServer</span>
+</code></pre></div>
+<p>When Rack calls <code>run</code> in <code>config.ru</code> it will, in the end, call the <code>self.run</code> method defined in the handler class. There the webserver will start processing requests, and for every request it will call the <code>call</code> method of the application object passed as an argument.</p>
+
+<h5><strong>Remember that</strong></h5>
+
+<ul>
+<li>the <b>appObject</b> is initialized once in <code>config.ru</code> and this istance will be used in <code>self.run</code> for every web request. Its <code>call</code> method will be called for every new request until the webserver process stops.</li>
+<li><b>Rack</b> is just the first component of a stack that could potentially have multiple middlewares. Infact there could be a chain of middlewares where the request pass through (every middleware could stop the execution of the request and return or forward it onto the next one) until it arrives at the end of the stack where a response is actually built and returned to the client.</li>
+</ul>
+
+<h5><strong>Advantages of using it</strong></h5>
+
+<p>The main advantage of course is that allows communication between various webservers and Ruby applications letting them to only speak one common language.</p>
+
+<p>Another really useful usage is that one could handle requests before passing them to the application. So one could <strong>deny requests</strong> based on IP addresses, make some <strong>rate limit</strong> system and stuff like that. For this purpose i personally use the <code>gem rack-attack</code>. It intercepts the request at Rack level and does some analysis (rate limiting, throttling, blocking based on IP addresses and HTTP parameters, etc.) before forwarding it to the application.</p>
+
+    </div>
+
+    <footer id="sticky-footer" class="py-3 bg-dark text-white-50">
+      <div class="container text-center">
+        <a href="https://twitter.com/alexandru_c_p"><i class="fab fa-twitter-square fa-3x footer-icon"></i></a>
+        <a href="https://it.linkedin.com/in/alexandrupopescu9/"><i class="fab fa-linkedin fa-3x footer-icon"></i></a>
+        <a href="mailto: alex92_360@live.it"><i class="fas fa-envelope-square fa-3x footer-icon"></i></a>
+      </div>
+    </footer>
+  </body>
+</html>

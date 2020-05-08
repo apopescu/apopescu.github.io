@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Blog Name</title>
+  <subtitle>Blog subtitle</subtitle>
+  <id>http://blog.url.com/</id>
+  <link href="http://blog.url.com/"/>
+  <link href="http://blog.url.com/feed.xml" rel="self"/>
+  <updated>2020-05-03T02:00:00+02:00</updated>
+  <author>
+    <name>Blog Author</name>
+  </author>
+  <entry>
+    <title>What is Rack and where does it fit in the stack?</title>
+    <link rel="alternate" href="http://blog.url.com/2020/05/03/rack.html"/>
+    <id>http://blog.url.com/2020/05/03/rack.html</id>
+    <published>2020-05-03T02:00:00+02:00</published>
+    <updated>2020-05-08T21:36:41+02:00</updated>
+    <author>
+      <name>Article Author</name>
+    </author>
+    <content type="html">&lt;h3 class="article-title"&gt;What is Rack and where does it fit in the web stack?&lt;/h3&gt;
+
+&lt;h5&gt;&lt;strong&gt;Definition&lt;/strong&gt;&lt;/h5&gt;
+
+&lt;p&gt;Let&amp;rsquo;s start with defining what &lt;b&gt;Rack&lt;/b&gt; actually is. This component is nothing else than a glue between a web server and a &lt;b&gt;Ruby&lt;/b&gt; application. It allows to pass a web request from the webserver to the Ruby application in a manner that the server does not need to know what kind of application is on the other side (a simple Ruby app, a Rails app, a Sinatra app, etc.)&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre class="highlight plaintext"&gt;&lt;code&gt; Webserver &amp;lt;--------(Rack language)--------&amp;gt; Ruby application
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;But why do we need it? Can&amp;rsquo;t we just use some CGI and get our app running? Not really, or at least not always. CGI scripts are suitable for very simple backends. However, today, many different frameworks arised and we need a way to make a different number of webservers talk to a different number of Ruby applications.&lt;/p&gt;
+
+&lt;p&gt;The solution to this is Rack. Without it, webservers should have many implementations of some kind of protocol that forwards requests to multiple applications.&lt;/p&gt;
+
+&lt;h5&gt;&lt;strong&gt;Where does is fit?&lt;/strong&gt;&lt;/h5&gt;
+
+&lt;p&gt;It stays between a web server and a Ruby application. Both of them must implement an interface in order to comply to the Rack requirements. &lt;/p&gt;
+
+&lt;p&gt;In other words they have to speak the Rack language. In Ruby there is no such thing as a &lt;strong&gt;interface&lt;/strong&gt; contruct like in Java or other OOP languages. This means they will have to basically implement some functionality based on the documentation Rack provides.&lt;/p&gt;
+
+&lt;h5&gt;&lt;strong&gt;The Ruby application interface&lt;/strong&gt;&lt;/h5&gt;
+
+&lt;p&gt;&lt;b&gt;Rack&lt;/b&gt; starts by reading a file, called &lt;b&gt;config.ru&lt;/b&gt; (launched as &lt;code&gt;rackup config.ru&lt;/code&gt;). This file instructs it on how it should start and which application to start.
+As a very simplified example this file looks like:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre class="highlight ruby"&gt;&lt;code&gt;&lt;span class="nb"&gt;require&lt;/span&gt; &lt;span class="s1"&gt;'rack'&lt;/span&gt;
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;MyApplication&lt;/span&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;call&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;env&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="c1"&gt;# env: the current request data like parameters and HTTP headers&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;200&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="s1"&gt;'Content-type'&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s1"&gt;'text/plain'&lt;/span&gt;&lt;span class="p"&gt;},&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;'The html response'&lt;/span&gt;&lt;span class="p"&gt;]]&lt;/span&gt;
+    &lt;span class="k"&gt;end&lt;/span&gt;
+&lt;span class="k"&gt;end&lt;/span&gt;
+&lt;span class="n"&gt;run&lt;/span&gt; &lt;span class="no"&gt;MyApplication&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;new&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;I&amp;rsquo;ll start to explain the last line of code. Here Rack is calling an his own method called &lt;code&gt;run&lt;/code&gt; which takes as an argument a Ruby object which is actually our web application (&lt;code&gt;MyApplication.new&lt;/code&gt;). The important thing here is that this object must respond to the &lt;code&gt;call&lt;/code&gt; method. This is a requirement that a Ruby application must satisfy, it is the interface i was talking about before. &lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;call&lt;/code&gt;&lt;/strong&gt; method must return a response in a predefined format. It must be an array with 3 elements:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;HTTP response status code&lt;/li&gt;
+&lt;li&gt;A list of the HTTP response headers in a Ruby hash format&lt;/li&gt;
+&lt;li&gt;The HTML output which will be rendered on client&amp;rsquo;s browser&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;For example, in a &lt;strong&gt;Rails&lt;/strong&gt; application, the object passed to &lt;code&gt;run&lt;/code&gt; is &lt;code&gt;Rails.application&lt;/code&gt; which actually responds to the &lt;code&gt;call&lt;/code&gt; method.&lt;/p&gt;
+
+&lt;h5&gt;&lt;strong&gt;The webserver interface&lt;/strong&gt;&lt;/h5&gt;
+
+&lt;p&gt;So far, we&amp;rsquo;ve seen how a Rack compliant application must behave, now let&amp;rsquo;s go on the webserver side and see what it must accomplish in order to talk via Rack.&lt;/p&gt;
+
+&lt;p&gt;Every webserver must define a &lt;strong&gt;rack handler&lt;/strong&gt; as a Ruby class that implements another method called &lt;code&gt;self.run&lt;/code&gt;. This method takes as parameters the application object and other options (see code bellow). Then the class must be &lt;strong&gt;registered&lt;/strong&gt; so Rack knows about it (there could be registered many different webserver classes within Rack).&lt;/p&gt;
+
+&lt;p&gt;The pseudo-code bellow should give you the idea of what actually is happening:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre class="highlight ruby"&gt;&lt;code&gt;&lt;span class="nb"&gt;require&lt;/span&gt; &lt;span class="s1"&gt;'rack/handler'&lt;/span&gt;
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;MyWebServer&lt;/span&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nc"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;run&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;appObject&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;options&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;server&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="no"&gt;TCPServer&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;new&lt;/span&gt;
+        &lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="n"&gt;req&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;server&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;run&lt;/span&gt;
+            &lt;span class="n"&gt;response&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;appObject&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;call&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;req&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+            &lt;span class="n"&gt;send_response_to_client&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;response&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;last&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="k"&gt;end&lt;/span&gt;
+    &lt;span class="k"&gt;end&lt;/span&gt;
+&lt;span class="k"&gt;end&lt;/span&gt;
+&lt;span class="n"&gt;register&lt;/span&gt; &lt;span class="ss"&gt;:mywebserver&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;MyWebServer&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;When Rack calls &lt;code&gt;run&lt;/code&gt; in &lt;code&gt;config.ru&lt;/code&gt; it will, in the end, call the &lt;code&gt;self.run&lt;/code&gt; method defined in the handler class. There the webserver will start processing requests, and for every request it will call the &lt;code&gt;call&lt;/code&gt; method of the application object passed as an argument.&lt;/p&gt;
+
+&lt;h5&gt;&lt;strong&gt;Remember that&lt;/strong&gt;&lt;/h5&gt;
+
+&lt;ul&gt;
+&lt;li&gt;the &lt;b&gt;appObject&lt;/b&gt; is initialized once in &lt;code&gt;config.ru&lt;/code&gt; and this istance will be used in &lt;code&gt;self.run&lt;/code&gt; for every web request. Its &lt;code&gt;call&lt;/code&gt; method will be called for every new request until the webserver process stops.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Rack&lt;/b&gt; is just the first component of a stack that could potentially have multiple middlewares. Infact there could be a chain of middlewares where the request pass through (every middleware could stop the execution of the request and return or forward it onto the next one) until it arrives at the end of the stack where a response is actually built and returned to the client.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h5&gt;&lt;strong&gt;Advantages of using it&lt;/strong&gt;&lt;/h5&gt;
+
+&lt;p&gt;The main advantage of course is that allows communication between various webservers and Ruby applications letting them to only speak one common language.&lt;/p&gt;
+
+&lt;p&gt;Another really useful usage is that one could handle requests before passing them to the application. So one could &lt;strong&gt;deny requests&lt;/strong&gt; based on IP addresses, make some &lt;strong&gt;rate limit&lt;/strong&gt; system and stuff like that. For this purpose i personally use the &lt;code&gt;gem rack-attack&lt;/code&gt;. It intercepts the request at Rack level and does some analysis (rate limiting, throttling, blocking based on IP addresses and HTTP parameters, etc.) before forwarding it to the application.&lt;/p&gt;
+</content>
+  </entry>
+</feed>

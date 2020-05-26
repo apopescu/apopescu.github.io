@@ -1,0 +1,179 @@
+<!doctype html>
+<html>
+  <head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-68261808-5"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-68261808-5');
+    </script>
+
+    <meta charset="utf-8" />
+    <meta http-equiv='X-UA-Compatible' content='ie=edge' />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Alexandru Constantin Popescu - Bcrypt: A future proof algorithm</title>
+    <meta name='description' content="How can Bcrypt be used also as a secure measure against attacks to your database. Some benchmarks will compare it with other hashing algorithms."/>
+
+    <link rel="alternate" type="application/atom+xml" title="Atom Feed" href="/feed.xml" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <link href="/stylesheets/site.css" rel="stylesheet" />
+    <link href="/stylesheets/fa-icons.css" rel="stylesheet" />
+    <link href="/stylesheets/highlighting.css" rel="stylesheet" />
+  </head>
+  
+  <body class="container">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <a class="navbar-brand" href="/">Alexandru C. Popescu</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon">
+          <i class="fas fa-bars" style="color:#fff; font-size:28px;"></i>
+        </span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarText">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item active">
+            <a class="nav-link" href="/">Posts</a>
+          </li>
+        </ul>
+        <span class="navbar-text">
+          <a href="/about.html">About me</a>
+        </span>
+      </div>
+    </nav>
+
+    <div class="container-fluid">
+      <h3 class="article-title">Bcrypt - a future proof hashing algorithm</h3>
+
+<h4><strong>Introduction</strong></h4>
+
+<p><em>Through this post i&rsquo;ll assume that you know what a hashing algorithm is and how it works at a basic level.</em></p>
+
+<p>BCrypt is a hashing algorithm designed in 1999 by Niels Provos and David Mazières. In the software industry there are lots of them: <strong>MD5, SHA-*</strong>, etc. All of these have, among other properties, a high <strong>speed</strong> execution time. They are designed to be fast, really fast. Think about a file of about various GB, the algorithm must return an output in the order of milliseconds.</p>
+
+<h4><strong>The Bcrypt case</strong></h4>
+
+<p>The peculiarity of Bcrypt is that it is designed to be slow. But why would one design such a thing? In computer science we want everything to be extremely fast, why would we be interested in such a solution? Well, we can find the answer in <strong>password hashing</strong> (not generic text but specifically password hashing). This algorithm suits perfectly for this purpose, unlike others which handle more generic (and bigger) input texts.</p>
+
+<p>A well trained programmer does not save passwords in a database in plain text, instead saves a hash of them. This is for security reasons, if your database gets dumped, one should try some rainbow-tables or brute force attacks in order to get the real passwords. We will see that Bcrypt is designed to help us to handle this specific situation.</p>
+
+<h4><strong>Input parameters</strong></h4>
+
+<p>Along with the input password it takes as arguments also a <strong>cost</strong> and a <strong>salt</strong> value. <em>(See code bellow)</em> </p>
+
+<p>The <strong>salt</strong> value is common through hashing algorithms and it is needed to avoid attacks with rainbow tables, thanks to it the algorithm will produce different outputs even with the same input password. We can provide one for Bcrypt or otherwise it will randomly choose one for us (it depends of the specific programming language implementation).</p>
+
+<p>The <strong>cost</strong> is a parameter we don&rsquo;t find in the other mentioned hashing algorithms. The hashing execution process is strictly related to this value.</p>
+
+<h4><strong>Algorithm</strong></h4>
+
+<p>The input password is used as a <strong>encryption key</strong> for encrypting a simple hardcoded string, which by the way is <em>OrpheanBeholderScryDoubt</em>. Overall the algorithm does 2^cost iterations before returning a hash. What these iterations really are is out of the scope of this post, but i want to give you the idea of the computational time.</p>
+<div class="highlight"><pre class="highlight ruby"><code><span class="c1"># Bcrypt pseudo-code</span>
+<span class="c1"># Input parameters</span>
+<span class="n">hashed_password</span> <span class="o">=</span> <span class="no">Bcrypt</span><span class="p">.</span><span class="nf">hash</span><span class="p">(</span><span class="s1">'your_password'</span><span class="p">,</span> <span class="n">cost</span><span class="p">,</span> <span class="n">salt</span><span class="p">)</span>
+
+<span class="c1"># Algorithm</span>
+<span class="k">module</span> <span class="nn">Bcrypt</span>
+    <span class="k">def</span> <span class="nf">hash</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="n">cost</span><span class="p">,</span> <span class="n">salt</span><span class="p">)</span>
+        <span class="p">(</span><span class="mi">2</span><span class="o">^</span><span class="n">cost</span><span class="p">).</span><span class="nf">times</span> <span class="k">do</span>
+            <span class="c1"># execution here...</span>
+        <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+<p>The hashing process consists of a large number of iterations and they are related to the cost parameter. For a cost value of 10 we&rsquo;ll have iterations in the order of 2^10, increasing the cost by 1 means the iterations will double. This is, on the other hand, related to execution time. No matter the operation, if you do it 2^4 times or you do it 2^64 times the timing will be different.</p>
+
+<h4><strong>The cost parameter</strong></h4>
+
+<p>This is the main concept behind the design of <strong>Bcrypt</strong>. One can adjust the cost parameter which will in turn influence the number of iterations, and finally the execution time of the algorithm. </p>
+
+<p>When the algorithm was designed, the cost parameter was probably around 4. Meanwhile hardware has improved and as a consequence the computation time. We can&rsquo;t use anymore a 4 value, today a 12 value should be considered enough. In 5 years maybe it will be around 14 an so on. We can tune the cost parameter as the hardware improves.</p>
+
+<p>On the other hand we can&rsquo;t exagerate with a high value. That&rsquo;s because the algorithm is executed every time a legitimate user logs in. Through a normal flow he/she provides a password, the backend hashes it and then check if it is equal with the stored one. A tradeoff between the best user experience and security must be found.</p>
+
+<h4><strong>Benchmarks</strong></h4>
+
+<p>Let&rsquo;s see some Ruby benchmarks about execution of 3 different algorithms (<strong>MD5</strong>, <strong>SHA-256</strong> and obviously <strong>Bcrypt</strong>) trying to hash 100 passwords contained in a passwords.txt file on medium hardware and single threaded process.</p>
+
+<h6><strong>MD5 benchmark</strong></h6>
+<div class="highlight"><pre class="highlight ruby"><code><span class="nb">require</span> <span class="s1">'digest'</span>
+<span class="nb">require</span> <span class="s1">'benchmark'</span>
+
+<span class="n">md5</span> <span class="o">=</span> <span class="no">Digest</span><span class="o">::</span><span class="no">MD5</span><span class="p">.</span><span class="nf">new</span>
+
+<span class="no">Benchmark</span><span class="p">.</span><span class="nf">bm</span> <span class="k">do</span> <span class="o">|</span><span class="n">x</span><span class="o">|</span>
+    <span class="n">x</span><span class="p">.</span><span class="nf">report</span> <span class="k">do</span>
+        <span class="no">File</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="s1">'passwords.txt'</span><span class="p">).</span><span class="nf">each_line</span> <span class="k">do</span> <span class="o">|</span><span class="n">password</span><span class="o">|</span>
+            <span class="n">md5</span><span class="p">.</span><span class="nf">digest</span> <span class="n">password</span>
+        <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="c1"># total: 0.000142 seconds</span>
+</code></pre></div>
+<h6><strong>SHA-256 benchmark</strong></h6>
+<div class="highlight"><pre class="highlight ruby"><code><span class="nb">require</span> <span class="s1">'digest'</span>
+<span class="nb">require</span> <span class="s1">'benchmark'</span>
+
+<span class="n">sha256</span> <span class="o">=</span> <span class="no">Digest</span><span class="o">::</span><span class="no">SHA256</span><span class="p">.</span><span class="nf">new</span>
+
+<span class="no">Benchmark</span><span class="p">.</span><span class="nf">bm</span> <span class="k">do</span> <span class="o">|</span><span class="n">x</span><span class="o">|</span>
+    <span class="n">x</span><span class="p">.</span><span class="nf">report</span> <span class="k">do</span>
+        <span class="no">File</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="s1">'passwords.txt'</span><span class="p">).</span><span class="nf">each_line</span> <span class="k">do</span> <span class="o">|</span><span class="n">password</span><span class="o">|</span>
+            <span class="n">sha256</span><span class="p">.</span><span class="nf">digest</span> <span class="n">password</span>
+        <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="c1"># total: 0.000180 seconds</span>
+</code></pre></div>
+<h6><strong>BCrypt benchmark</strong></h6>
+<div class="highlight"><pre class="highlight ruby"><code><span class="nb">require</span> <span class="s1">'bcrypt'</span>
+<span class="nb">require</span> <span class="s1">'benchmark'</span>
+
+<span class="c1"># tuning cost parameter (salt in this case is generated randomly by the library)</span>
+<span class="no">BCrypt</span><span class="o">::</span><span class="no">Engine</span><span class="p">.</span><span class="nf">cost</span> <span class="o">=</span> <span class="mi">12</span>
+
+<span class="no">Benchmark</span><span class="p">.</span><span class="nf">bm</span> <span class="k">do</span> <span class="o">|</span><span class="n">x</span><span class="o">|</span>
+    <span class="n">x</span><span class="p">.</span><span class="nf">report</span> <span class="k">do</span>
+        <span class="no">File</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="s1">'passwords.txt'</span><span class="p">).</span><span class="nf">each_line</span> <span class="k">do</span> <span class="o">|</span><span class="n">password</span><span class="o">|</span>
+            <span class="no">BCrypt</span><span class="o">::</span><span class="no">Password</span><span class="p">.</span><span class="nf">create</span><span class="p">(</span><span class="n">password</span><span class="p">)</span>
+        <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="c1"># total: 32.111440 seconds</span>
+</code></pre></div>
+<p>The timing is showing us that Bcrypt is much slower than the others (about 0.3 seconds per password). </p>
+
+<p>What can we learn from this? If your DB gets stolen, a potential attacker could then try only <strong>200</strong> paswords in a dictionary attack in 1 minute because they are Bcrypt hashed, while a legitimate user should wait about 0.3 seconds before login. I think it is absolutely worth waiting.</p>
+
+<p>With MD5 and SHA256, instead, the attacker would try about <strong>40.000.000</strong> passwords in 1 minute under the same conditions. That&rsquo;s impressive. 200 vs 40.000.000 passwords in 1 minute. If security is one of your main concerns you should give it a try. In case of attack, you would make the attackers life much harder.</p>
+
+<h4><strong>The output</strong></h4>
+
+<p>The output of the algorithm is something like $<span style="color:blue">2a</span>$<span style="color:green">10</span>$<span style="color:red">N9qo8uLOickgx2ZMRZoMye</span><span style="color:brown">IjZAgcfl7p92ldGxad68LJZdL17lhWy</span>.
+You should notice that there are 3 sections between <strong>$</strong> character. The hashing algorithm format (<span style="color:blue"><strong>2a</strong></span> - a newly version of Bcrypt), the cost (<span style="color:green"><strong>10</strong></span>), the salt (<span style="color:red"><strong>N9qo8uLOickgx2ZMRZoMye</strong></span>, the first 22 bytes of the third part) and at the end the hashed password (<span style="color:brown"><strong>IjZAgcfl7p92ldGxad68LJZdL17lhWy</strong></span>). All this is what actually will be stored in a database on user registration.</p>
+
+<p>At login time, the algorithm will take the user provided cleartext password, the cost associated with his stored password (e.g. 10), the salt associated with his stored password (e.g. N9qo8uLOickgx2ZMRZoMye) and do the execution as described before. If the result matches the last part of his hashed password (e.g IjZAgcfl7p92ldGxad68LJZdL17lhWy) then he is allowed to login.</p>
+
+<h4><strong>Conclusion</strong></h4>
+
+<p>We saw that slowness in computer science, sometimes pays off. The algorithm is simple enough and there are libraries for almost every programming language. Rails framework uses it as a default. I use it in almost all my projects and you should consider it too. Just remember, in a few years to tune the cost parameter in order to adapt to hardware improvements, old passwords with old costs will still work obviously.</p>
+
+    </div>
+
+    <footer id="sticky-footer" class="py-3 bg-dark text-white-50">
+      <div class="container text-center">
+        <a href="https://twitter.com/alexandru_c_p"><i class="fab fa-twitter-square fa-3x footer-icon"></i></a>
+        <a href="https://it.linkedin.com/in/alexandrupopescu9/"><i class="fab fa-linkedin fa-3x footer-icon"></i></a>
+        <a href="mailto: alex92_360@live.it"><i class="fas fa-envelope-square fa-3x footer-icon"></i></a>
+      </div>
+      <i class="fas fa-copyright" aria-hidden="true"></i> 2020 - Alexandru Constantin Popescu
+    </footer>
+  </body>
+</html>
